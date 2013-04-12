@@ -40,9 +40,9 @@ install: dist
 echo "Installing packages..."
 sudo apt-get update
 sudo apt-get -y install ca-certificates git-core subversion binutils libva1 libpcre3-dev libidn11-dev libboost1.50-dev libfreetype6-dev libusb-1.0-0-dev
+
 sudo apt-get -y install gcc-4.7 g++-4.7
 pushd /usr/bin && sudo rm gcc && sudo ln -s gcc-4.7 gcc && sudo rm g++ && sudo ln -s g++-4.7 g++ && popd
-
 
 echo "Installing the rpi-update script..."
 sudo wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update && sudo chmod +x /usr/bin/rpi-update
@@ -52,4 +52,5 @@ sudo rpi-update
 echo "In order to compile ffmpeg you need to set memory_split to 16 for 256MB RAM PIs (0 does not work) or to at most 256 for 512MB RAM PIs, respectively. Otherwise there is not enough RAM to compile ffmpeg. Please do the apropriate in the raspi-config and select finish to reboot your RPi. Warning: to run compiled omxplayer please start raspi-config again and set memory_split to at least 128. [Press RETURN to continue]"
 read -r REPLY
 sudo raspi-config
+
 
