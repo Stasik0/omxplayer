@@ -27,15 +27,11 @@
 
 #include <IL/OMX_Video.h>
 
-#include "BitstreamConverter.h"
-
 #include "OMXClock.h"
 #include "OMXReader.h"
 
 #include "guilib/Geometry.h"
 
-
-#define VIDEO_BUFFERS 60
 
 #define CLASSNAME "COMXVideo"
 
@@ -49,7 +45,8 @@ public:
 
   // Required overrides
   bool SendDecoderConfig();
-  bool Open(COMXStreamInfo &hints, OMXClock *clock, float display_aspect = 0.0f, bool deinterlace = false, bool hdmi_clock_sync = false, void* boblight_instance = NULL, int boblight_sizedown = 64, int boblight_margin = 10, int boblight_timeout = 35);
+  bool NaluFormatStartCodes(enum CodecID codec, uint8_t *in_extradata, int in_extrasize);
+  bool Open(COMXStreamInfo &hints, OMXClock *clock, const CRect &m_DestRect, float display_aspect = 0.0f, bool deinterlace = false, bool hdmi_clock_sync = false, float fifo_size = 0.0f, void* boblight_instance = NULL, int boblight_sizedown = 64, int boblight_margin = 10, int boblight_timeout = 35);
   void Close(void);
   unsigned int GetFreeSpace();
   unsigned int GetSize();
@@ -123,14 +120,13 @@ protected:
   uint8_t           *m_extradata;
   int               m_extrasize;
 
-  CBitstreamConverter   *m_converter;
-  bool              m_video_convert;
   std::string       m_video_codec_name;
 
   bool              m_deinterlace;
   bool              m_hdmi_clock_sync;
-  bool              m_first_frame;
   bool              m_first_text;
+  CRect             m_dst_rect;
+  CRect             m_src_rect;
 };
 
 #endif

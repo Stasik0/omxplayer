@@ -27,6 +27,8 @@
 
 #include "OMXClock.h"
 
+#define OMX_PRE_ROLL 200
+
 int64_t OMXClock::m_systemOffset;
 int64_t OMXClock::m_systemFrequency;
 bool    OMXClock::m_ismasterclock;
@@ -281,10 +283,12 @@ bool OMXClock::OMXInitialize(bool has_video, bool has_audio)
   if(!m_omx_clock.Initialize(componentName, OMX_IndexParamOtherInit))
     return false;
 
+#if 0
   OMX_TIME_CONFIG_CLOCKSTATETYPE clock;
   OMX_INIT_STRUCTURE(clock);
 
   clock.eState = OMX_TIME_ClockStateWaitingForStartTime;
+  clock.nOffset   = ToOMXTime(-1000LL * OMX_PRE_ROLL);
 
   if(m_has_audio)
   {
@@ -302,7 +306,7 @@ bool OMXClock::OMXInitialize(bool has_video, bool has_audio)
     CLog::Log(LOGERROR, "OMXClock::Initialize error setting OMX_IndexConfigTimeClockState\n");
     return false;
   }
-
+#endif
   OMX_TIME_CONFIG_ACTIVEREFCLOCKTYPE refClock;
   OMX_INIT_STRUCTURE(refClock);
 
@@ -438,7 +442,7 @@ bool  OMXClock::OMXStop(bool lock /* = true */)
   return true;
 }
 
-bool OMXClock::OMXStart(bool lock /* = true */)
+bool OMXClock::OMXStart(double pts, bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
     return false;
@@ -451,6 +455,7 @@ bool OMXClock::OMXStart(bool lock /* = true */)
   OMX_INIT_STRUCTURE(clock);
 
   clock.eState = OMX_TIME_ClockStateRunning;
+  clock.nStartTime = ToOMXTime((uint64_t)pts);
 
   omx_err = OMX_SetConfig(m_omx_clock.GetComponent(), OMX_IndexConfigTimeClockState, &clock);
   if(omx_err != OMX_ErrorNone)
@@ -486,6 +491,8 @@ bool OMXClock::OMXReset(bool lock /* = true */)
     OMXStop(false);
 
     clock.eState    = OMX_TIME_ClockStateWaitingForStartTime;
+    clock.nOffset   = ToOMXTime(-1000LL * OMX_PRE_ROLL);
+
     if(m_has_audio)
     {
       clock.nWaitMask |= OMX_CLOCKPORT0;
@@ -505,7 +512,7 @@ bool OMXClock::OMXReset(bool lock /* = true */)
       return false;
     }
 
-    OMXStart(false);
+    OMXStart(0.0, false);
   }
 
   if(lock)
@@ -704,6 +711,7 @@ bool OMXClock::OMXWaitStart(double pts, bool lock /* = true */)
   else
   {
     clock.eState = OMX_TIME_ClockStateWaitingForStartTime;
+    clock.nOffset   = ToOMXTime(-1000LL * OMX_PRE_ROLL);
 
     if(m_has_audio)
     {

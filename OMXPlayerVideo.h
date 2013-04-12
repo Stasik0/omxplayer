@@ -78,11 +78,14 @@ protected:
   double                    m_frametime;
   bool                      m_Deinterlace;
   float                     m_display_aspect;
+  CRect                     m_DestRect;
   bool                      m_bMpeg;
   bool                      m_bAbort;
   bool                      m_use_thread;
   bool                      m_flush;
   unsigned int              m_cached_size;
+  unsigned int              m_max_data_size;
+  float                     m_fifo_size;
   bool                      m_hdmi_clock_sync;
   double                    m_iVideoDelay;
   double                    m_pts;
@@ -107,7 +110,8 @@ private:
 public:
   OMXPlayerVideo();
   ~OMXPlayerVideo();
-  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect, void* m_boblight, int boblight_sizedown, int boblight_margin, int boblight_timeout);
+  bool Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread,
+                   float display_aspect, float queue_size, float fifo_size, void* m_boblight, int boblight_sizedown, int boblight_margin, int boblight_timeout);
   bool Close();
   void Output(double pts);
   bool Decode(OMXPacket *pkt);
@@ -122,6 +126,8 @@ public:
   double GetCurrentPTS() { return m_pts; };
   double GetFPS() { return m_fps; };
   unsigned int GetCached() { return m_cached_size; };
+  unsigned int GetMaxCached() { return m_max_data_size; };
+  unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
   void  WaitCompletion();
   void SetDelay(double delay) { m_iVideoDelay = delay; }
   double GetDelay() { return m_iVideoDelay; }

@@ -13,25 +13,14 @@ Downloading OMXPlayer
 Compiling OMXPlayer
 -------------------
 
+GCC version 4.7 is required.
+
 ### Cross Compiling
 
 You need the content of your sdcard somewhere mounted or copied. There might be
 development headers to install on the running Pi system for the crosscompiling.
 
 Edit Makefile.include and change the settings according your locations.
-
-### Compiling on the Pi
-
-You can also compile it on the PI the native way ;)
-
-To compile on raspbian run 
-
-    ./prepare-native-raspbian.sh
-
-before running make.
-
-Running OMXPlayer
------------------
 
     make boblight
     make ffmpeg
@@ -44,33 +33,50 @@ Installing OMXPlayer
 Copy over `omxplayer-dist/*` to the Pi `/`. You may want to specify a valid font
 path inside the `omxplayer` shell script.
 
-After a native compile just run 
+### Compiling on the Pi
 
-    sudo make install
+You can also compile it on the PI the native way ;)
+Run this script (which will install packages and update firmware)
+    ./prepare-native-raspbian.sh
+and build with
+    make ffmpeg
+    make
 
 Using OMXPlayer
 ---------------
 
     Usage: omxplayer [OPTIONS] [FILE]
     Options :
-             -h / --help                     print this help
-             -n / --aidx  index              audio stream index    : e.g. 1
-             -o / --adev  device             audio out device      : e.g. hdmi/local
-             -i / --info                     dump stream format and exit
-             -s / --stats                    pts and buffer stats
-             -p / --passthrough              audio passthrough
-             -d / --deinterlace              deinterlacing
-             -w / --hw                       hw audio decoding
-             -3 / --3d                       switch tv into 3d mode
-             -y / --hdmiclocksync            adjust display refresh rate to match video
-             -t / --sid index                show subtitle with index
-             -r / --refresh                  adjust framerate/resolution to video
-                  --boost-on-downmix         boost volume when downmixing
-                  --font path                subtitle font
-                                             (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
-                  --font-size size           font size as thousandths of screen height
-                                             (default: 55)
-                  --align left/center        subtitle alignment (default: left)
+             -h / --help                    print this help
+             -n / --aidx  index             audio stream index    : e.g. 1
+             -o / --adev  device            audio out device      : e.g. hdmi/local
+             -i / --info                    dump stream format and exit
+             -s / --stats                   pts and buffer stats
+             -p / --passthrough             audio passthrough
+             -d / --deinterlace             deinterlacing
+             -w / --hw                      hw audio decoding
+             -3 / --3d mode                 switch tv into 3d mode (e.g. SBS/TB)
+             -y / --hdmiclocksync           adjust display refresh rate to match video (default)
+             -z / --nohdmiclocksync         do not adjust display refresh rate to match video
+             -t / --sid index               show subtitle with index
+             -r / --refresh                 adjust framerate/resolution to video
+             -g / --genlog                  generate log file
+             -l / --pos n                   start position (in seconds)
+                  --boost-on-downmix        boost volume when downmixing
+                  --vol n                   Set initial volume in millibels (default 0)
+                  --subtitles path          external subtitles in UTF-8 srt format
+                  --font path               subtitle font
+                                            (default: /usr/share/fonts/truetype/freefont/FreeSans.ttf)
+                  --font-size size          font size as thousandths of screen height
+                                            (default: 55)
+                  --align left/center       subtitle alignment (default: left)
+                  --lines n                 number of lines to accommodate in the subtitle buffer
+                                            (default: 3)
+                  --win "x1 y1 x2 y2"       Set position of video window
+                  --audio_fifo  n           Size of audio output fifo in seconds
+                  --video_fifo  n           Size of video output fifo in MB
+                  --audio_queue n           Size of audio input queue in MB
+                  --video_queue n           Size of video input queue in MB
              -b / --boblight                 activate boblight client
                   --boblight-host ip[:port]  boblight server
                                              (default: localhost:19333)
@@ -104,6 +110,8 @@ While playing you can use the following keys to control omxplayer:
     n			Previous Subtitle stream
     m			Next Subtitle stream
     s			Toggle subtitles
+    d			Subtitle delay -250 ms
+    f			Subtitle delay +250 ms
     q			Exit OMXPlayer
     Space or p	Pause/Resume
     -			Decrease Volume

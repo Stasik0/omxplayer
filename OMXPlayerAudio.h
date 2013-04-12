@@ -82,8 +82,11 @@ protected:
   bool                      m_flush;
   enum PCMChannels          *m_pChannelMap;
   unsigned int              m_cached_size;
+  unsigned int              m_max_data_size;
+  float                     m_fifo_size;
   COMXAudioCodecOMX         *m_pAudioCodec;
   int                       m_speed;
+  long                      m_initialVolume;
   double m_error;    //last average error
 
   int64_t m_errortime; //timestamp of last time we measured
@@ -109,8 +112,8 @@ public:
   OMXPlayerAudio();
   ~OMXPlayerAudio();
   bool Open(COMXStreamInfo &hints, OMXClock *av_clock, OMXReader *omx_reader,
-            std::string device, bool passthrough, bool hw_decode,
-            bool boost_on_downmix, bool use_thread);
+            std::string device, bool passthrough, long initialVolume, bool hw_decode,
+            bool boost_on_downmix, bool use_thread, float queue_size, float fifo_size);
   bool Close();
   bool Decode(OMXPacket *pkt);
   void Process();
@@ -123,16 +126,12 @@ public:
   bool CloseDecoder();
   double GetDelay();
   double GetCacheTime();
+  double GetCacheTotal();
   double GetCurrentPTS() { return m_iCurrentPts; };
   void WaitCompletion();
-  unsigned int GetCached()
-  {
-    Lock();
-    unsigned int cached_size = m_cached_size;
-    UnLock();
-    return cached_size;
-
-  };
+  unsigned int GetCached() { return m_cached_size; };
+  unsigned int GetMaxCached() { return m_max_data_size; };
+  unsigned int GetLevel() { return m_max_data_size ? 100 * m_cached_size / m_max_data_size : 0; };
   void  RegisterAudioCallback(IAudioCallback* pCallback);
   void  UnRegisterAudioCallback();
   void  DoAudioWork();

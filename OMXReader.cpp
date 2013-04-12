@@ -129,7 +129,7 @@ bool OMXReader::Open(std::string filename, bool dump_format)
 
   m_dllAvFormat.av_register_all();
   m_dllAvFormat.avformat_network_init();
-  m_dllAvUtil.av_log_set_level(AV_LOG_QUIET);
+  m_dllAvUtil.av_log_set_level(dump_format ? AV_LOG_INFO:AV_LOG_QUIET);
 
   int           result    = -1;
   AVInputFormat *iformat  = NULL;
@@ -246,10 +246,6 @@ bool OMXReader::Open(std::string filename, bool dump_format)
         CLog::Log(LOGDEBUG, "COMXPlayer::OpenFile - set cache throttle rate to %u bytes per second", maxrate);
     }
   }
-
-  printf("file : %s result %d format %s audio streams %d video streams %d chapters %d subtitles %d length %d\n", 
-      m_filename.c_str(), result, m_pFormatContext->iformat->name, m_audio_count, m_video_count, m_chapter_count, m_subtitle_count, GetStreamLength() / 1000);
-
 
   m_speed       = DVD_PLAYSPEED_NORMAL;
 
@@ -500,7 +496,7 @@ OMXPacket *OMXReader::Read()
       pkt.pts = AV_NOPTS_VALUE;
   }
   // we need to get duration slightly different for matroska embedded text subtitels
-  if(m_bMatroska && pStream->codec->codec_id == CODEC_ID_TEXT && pkt.convergence_duration != 0)
+  if(m_bMatroska && pStream->codec->codec_id == AV_CODEC_ID_SUBRIP && pkt.convergence_duration != 0)
     pkt.duration = pkt.convergence_duration;
 
   if(m_bAVI && pStream->codec && pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO)
@@ -660,9 +656,9 @@ void OMXReader::AddStream(int id)
     return;
 
   AVStream *pStream = m_pFormatContext->streams[id];
-  // discard MJPEG/PNG stream as we don't support it, and it stops mp3 files playing with album art
+  // discard PNG stream as we don't support it, and it stops mp3 files playing with album art
   if (pStream->codec->codec_type == AVMEDIA_TYPE_VIDEO && 
-    (pStream->codec->codec_id == CODEC_ID_MJPEG || pStream->codec->codec_id == CODEC_ID_MJPEGB || pStream->codec->codec_id == CODEC_ID_PNG))
+    (pStream->codec->codec_id == CODEC_ID_PNG))
     return;
 
   switch (pStream->codec->codec_type)
@@ -821,9 +817,6 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
   hints->codec         = stream->codec->codec_id;
   hints->extradata     = stream->codec->extradata;
   hints->extrasize     = stream->codec->extradata_size;
-  hints->codec         = stream->codec->codec_id;
-  hints->extradata     = stream->codec->extradata;
-  hints->extrasize     = stream->codec->extradata_size;
   hints->channels      = stream->codec->channels;
   hints->samplerate    = stream->codec->sample_rate;
   hints->blockalign    = stream->codec->block_align;
@@ -863,6 +856,8 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
       hints->aspect = av_q2d(stream->codec->sample_aspect_ratio) * stream->codec->width / stream->codec->height;
     else
       hints->aspect = 0.0f;
+    if (m_bAVI && stream->codec->codec_id == CODEC_ID_H264)
+      hints->ptsinvalid = true;
   }
 
   return true;

@@ -40,8 +40,6 @@
 #include "utils/BitstreamStats.h"
 #endif
 
-#define MAX_DATA_SIZE    10 * 1024 * 1024
-
 OMXPlayerVideo::OMXPlayerVideo()
 {
   m_open          = false;
@@ -59,6 +57,8 @@ OMXPlayerVideo::OMXPlayerVideo()
   m_speed         = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
+  m_max_data_size = 10 * 1024 * 1024;
+  m_fifo_size     = (float)80*1024*60 / (1024*1024);
 
   pthread_cond_init(&m_packet_cond, NULL);
   pthread_cond_init(&m_picture_cond, NULL);
@@ -114,7 +114,8 @@ void OMXPlayerVideo::UnLockSubtitles()
     pthread_mutex_unlock(&m_lock_subtitle);
 }
 
-bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread, float display_aspect, void* boblight, int boblight_sizedown, int boblight_margin, int boblight_timeout)
+bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, const CRect& DestRect, bool deinterlace, bool mpeg, bool hdmi_clock_sync, bool use_thread,
+                             float display_aspect, float queue_size, float fifo_size, void* boblight, int boblight_sizedown, int boblight_margin, int boblight_timeout)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
@@ -143,6 +144,11 @@ bool OMXPlayerVideo::Open(COMXStreamInfo &hints, OMXClock *av_clock, bool deinte
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_iSubtitleDelay = 0;
   m_pSubtitleCodec = NULL;
+  m_DestRect    = DestRect;
+  if (queue_size != 0.0)
+    m_max_data_size = queue_size * 1024 * 1024;
+  if (fifo_size != 0.0)
+    m_fifo_size = fifo_size;
 
   //copy boblight parameter
   m_boblight_sizedown = boblight_sizedown;
@@ -254,10 +260,12 @@ void OMXPlayerVideo::Output(double pts)
   m_FlipTimeStamp += max(0.0, iSleepTime);
   m_FlipTimeStamp += iFrameDuration;
 
+#if 0
   while(m_av_clock->GetAbsoluteClock(false) < (iCurrentClock + iSleepTime + DVD_MSEC_TO_TIME(500)) )
   {
     OMXClock::OMXSleep(10);
   }
+#endif
 
   /*
   printf("iPlayingClock %f iCurrentClock %f iClockSleep %f iFrameSleep %f iFrameDuration %f WaitAbsolut %f m_FlipTimeStamp %f pts %f\n", 
@@ -269,7 +277,9 @@ void OMXPlayerVideo::Output(double pts)
 
   //g_renderManager.FlipPage(CThread::m_bStop, (iCurrentClock + iSleepTime) / DVD_TIME_BASE, -1, mDisplayField);
 
+#if 0
   m_av_clock->WaitAbsoluteClock((iCurrentClock + iSleepTime));
+#endif
 
   // guess next frame pts. iDuration is always valid
   if (m_speed != 0)
@@ -377,6 +387,9 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
 
     ret = true;
   }
+  else
+    // video fifo is full, allow other tasks to run
+    OMXClock::OMXSleep(10);
 
   return ret;
 }
@@ -496,7 +509,7 @@ bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
   if(m_bStop || m_bAbort)
     return ret;
 
-  if((m_cached_size + pkt->size) < MAX_DATA_SIZE)
+  if((m_cached_size + pkt->size) < m_max_data_size)
   {
     Lock();
     m_cached_size += pkt->size;
@@ -525,7 +538,7 @@ bool OMXPlayerVideo::OpenDecoder()
   m_frametime = (double)DVD_TIME_BASE / m_fps;
 
   m_decoder = new COMXVideo();
-  if(!m_decoder->Open(m_hints, m_av_clock, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync, m_boblight, m_boblight_sizedown, m_boblight_margin, m_boblight_timeout))
+  if(!m_decoder->Open(m_hints, m_av_clock, m_DestRect, m_display_aspect, m_Deinterlace, m_hdmi_clock_sync, m_fifo_size,  m_boblight, m_boblight_sizedown, m_boblight_margin, m_boblight_timeout))
   {
     CloseDecoder();
     return false;
